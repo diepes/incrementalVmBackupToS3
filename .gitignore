@@ -1,1 +1,5 @@
 *.sh.*
+backupS3.config
+old/
+history-backup.txt
+tarexclude.txt

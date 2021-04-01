@@ -1,0 +1,10 @@
+##PES from 20170709 use only relative path from /(root)
+backup/
+home/rtorrent
+home/*/.cache
+var/log
+var/lib/moinmoin/*/data/*-log*
+.config
+.gradle
+google/usr/lib/googleearth
+

@@ -1,0 +1,11 @@
+# config vars sourced by backupS3.sh
+# (c) 2021 P.E.Smit GPL 3a
+#
+configdir="/root/backupscript"
+basefilename="backupVM"
+s3bucket="backupVM"
+tarexclude="$configdir/tarexclude.txt"
+tardirectories="etc home backup root"
+tarIncrementalInfo="/var/log/tarIncrementalBackupscript" #script adds ".inc.snar" or ".full.snar"
+histfile="$configdir/history-backup.txt"
+#
