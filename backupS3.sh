@@ -1,8 +1,9 @@
 #!/bin/bash
-#(c) 2017 P.E.Smit GPL 3a
+#(c) 2017-2021 P.E.Smit GPL 3a
+# 2021-06-06 aws s3 cp add to path  backupFull/backupIncremental and date for seperate retention rules.
 # 2018-10-22 backup meta info to */info/* subfolder namespace
 # 2018-10-20 add -a to tee log output
-# 2017-08-19 all echo to >> $histfile 
+# 2017-08-19 all echo to >> $histfile (histfile sourced from backupS3.conf)
 # 2017-07-09 fix logic so if tarIncrementalLevelCounter.txt removed a full backup will be made.
 # 2017-07-09 PES provide tar dirs as relative  and use -C / to start from root
 # 2017-07-09 PES move from s3cmd to aws-cli s3
@@ -11,8 +12,9 @@
 # 2016-05-02 PES backup script to s3(AWS) once a month.   (And b2 backblaze)
 # http://paulwhippconsulting.com/blog/using-tar-for-full-and-incremental-backups/
 #
+#set -x
 
-set -e ; source ./backupS3.config
+source ./backupS3.config || ( echo "Error importing backupS3.config"; exit 1 )
 #
 d="`date +%F-%Hh%M`"
 day="`date +%d`"  ##Always full backup when day=1
@@ -26,10 +28,10 @@ if [ "$day" -eq "1" ]; then l=0; fi #Begining of month level=0 full backup
 echo "$l" > tarIncrementalLevelCounter.txt
 if [ "$l" -gt "0" ]; 
 then 
-    level=1; #Only level=1 incremental files.
+    level=1; #set level=1 incremental files.
     #Retrieve full name backupVigor-2016-08-24-09h47
     fullName="`cat $configdir/tarIncrementalFullFileName.txt`" ##Read name of last full backup
-    f="$fullName-to-$d-level${level}_${l}.inc.tar.xz"
+    f="backupsInc/$(date +%Y%m)/$fullName-to-$d-level${level}_${l}.inc.tar.xz"
     #Always use last full full.snar as incremental guide.
     rm "$tarIncrementalInfo.inc.snar"
     cp "$tarIncrementalInfo.full.snar"  "$tarIncrementalInfo.inc.snar"
@@ -38,7 +40,7 @@ then
 else 
     level=0;  #Full backup
     fullName="${basefilename}-$d" ##Create new baseName+date
-    f="${fullName}-FULL.tar.xz"   ##New full archive file name
+    f="backupsFull/$(date +%Y)/${fullName}-FULL.tar.xz"   ##New full archive file name
     echo "${fullName}" > $configdir/tarIncrementalFullFileName.txt
     echo "" > $tarIncrementalInfo ## Start fresh no incremental history
     #remove incremental files
@@ -48,8 +50,8 @@ else
     #backup backup script.
     #s3cmd put backupS3.sh s3://${s3bucket}/backupS3.sh.${d}.sh
     #s3cmd put $configdir/tarexclude.txt s3://${s3bucket}/tarexclude.txt.${d}.txt
-    aws s3 cp $configdir/backupS3.sh    s3://${s3bucket}/info/${fullName}-backupS3.sh
-    aws s3 cp $configdir/tarexclude.txt s3://${s3bucket}/info/${fullName}-tarexclude.txt
+    aws s3 cp $configdir/backupS3.sh    s3://${s3bucket}/info/$(date +%Y)/${fullName}-backupS3.sh
+    aws s3 cp $configdir/tarexclude.txt s3://${s3bucket}/info/$(date +%Y)/${fullName}-tarexclude.txt
 
 fi  #Max level1
 echo "starting backup to s3, Incremental=$l, level=$level, to $f  ..." >> $histfile
@@ -76,7 +78,7 @@ if [ $? -eq 0 ]
     err=0
 fi
 cd $configdir
-echo "Backup done, Incremental=$l , level=$level , to $f ..." >> $histfile
+echo "Backup done, Incremental=$l , level=$level , $(aws s3 ls s3://${s3bucket}/$f) ..." >> $histfile
 echo "$d , s3://${s3bucket}/$f , `ls -lh $tarIncrementalInfo`" >> $histfile ##Add small log
 #ls -lh $f*
 ls -lh $tarIncrementalInfo
